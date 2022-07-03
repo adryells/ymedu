@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:just_do/repositories/todo_repository.dart';
 import '../models/todo.dart';
 import '../widgets/todo_list_item.dart';
 
@@ -15,6 +16,18 @@ class _TodoState extends State<Todo> {
   int? deletedTodoPosition;
 
   final TextEditingController todoController = TextEditingController();
+  final TodoRepository todoRepository = TodoRepository();
+  String? errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    todoRepository.getTodoList().then((value) {
+      setState(() {
+        todos = value;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,44 +40,40 @@ class _TodoState extends State<Todo> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
-                  children: const [
-                    Expanded(
-                      child: Text(
-                        "Lista de tarefas",
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 16,
-                ),
-                Row(
                   children: [
                     Expanded(
                       child: TextField(
                         controller: todoController,
                         decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
-                            hintText: "Ex: Estudar matematica.",
-                            labelText: "Adicione uma tarefa"),
+                          border: OutlineInputBorder(),
+                          hintText: "Ex: Estudar matematica.",
+                          labelText: "Adicione uma tarefa",
+                        ),
                       ),
                     ),
                     const SizedBox(
-                      width: 8,
+                      width: 30,
                     ),
                     ElevatedButton(
                       onPressed: () {
                         String text = todoController.text;
+
+                        if (text.isEmpty) {
+                          errorText = "O texto não pode estar vazio!";
+                          showEmptyTextError(errorText);
+                          return;
+                        }
+
                         TodoItem newTodoItem =
                             TodoItem(title: text, datetime: DateTime.now());
+
                         setState(() {
                           todos.add(newTodoItem);
+                          errorText = null;
                         });
+
                         todoController.clear();
+                        todoRepository.saveTodoList(todos);
                       },
                       child: const Icon(
                         Icons.add,
@@ -78,7 +87,7 @@ class _TodoState extends State<Todo> {
                   ],
                 ),
                 const SizedBox(
-                  height: 16,
+                  height: 8,
                 ),
                 Flexible(
                   child: ListView(
@@ -127,6 +136,7 @@ class _TodoState extends State<Todo> {
     setState(() {
       todos.remove(todo);
     });
+    todoRepository.saveTodoList(todos);
 
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
@@ -145,11 +155,24 @@ class _TodoState extends State<Todo> {
     );
   }
 
+  void showEmptyTextError(String? errorText) {
+    errorText ??= "";
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorText),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   void onEdit(TodoItem todo) {
     setState(() {
       todo.title = "Atualizado";
       todo.datetime = DateTime.now();
     });
+    todoRepository.saveTodoList(todos);
   }
 
   void showDeleteAllTodosDialog() {
@@ -163,6 +186,7 @@ class _TodoState extends State<Todo> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
+              todoRepository.saveTodoList(todos);
             },
             child: const Text("Cancelar"),
           ),
@@ -172,6 +196,7 @@ class _TodoState extends State<Todo> {
                 todos.clear();
               });
               Navigator.of(context).pop();
+              todoRepository.saveTodoList(todos);
             },
             child: const Text(
               "Apagar tudo",
