@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.just_do">
    <application
-        android:label="just_do"
+        android:label="faça tudo!"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
